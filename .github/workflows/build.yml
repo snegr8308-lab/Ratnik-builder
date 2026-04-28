@@ -1,73 +1,22 @@
 name: Build APK
-
-on:
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1.2.2
         with:
-          python-version: '3.10'
+          buildozer_version: master
+          command: buildozer android debug
+          repository_root: .
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk \
-            python3-pip autoconf libtool pkg-config zlib1g-dev \
-            libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev
-
-      - name: Install buildozer
-        run: |
-          pip install --upgrade pip
-          pip install buildozer cython
-
-      - name: Setup Android SDK manually
-        run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
-          cd ~/.buildozer/android/platform/android-sdk
-          
-          # Скачиваем command-line tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip
-          rm commandlinetools-linux-9477386_latest.zip
-          
-          # Перемещаем в правильную структуру
-          mv cmdline-tools latest
-          mkdir -p cmdline-tools
-          mv latest cmdline-tools/
-          
-          # Принимаем лицензии
-          yes | ./cmdline-tools/latest/bin/sdkmanager --licenses || true
-          
-          # Устанавливаем build-tools
-          ./cmdline-tools/latest/bin/sdkmanager "build-tools;30.0.3" "platforms;android-30" "platform-tools" || true
-
-      - name: Set environment variables
-        run: |
-          echo "ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk" >> $GITHUB_ENV
-          echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
-          echo "$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-      - name: Build APK with buildozer
-        run: |
-          buildozer android debug deploy
-
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ratnik-apk
+          name: package
           path: bin/*.apk
+          
